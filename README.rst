@@ -1,88 +1,49 @@
 ============================================
-gl3w: Simple OpenGL 3/4 core profile loading
+glesw: Simple OpenGL ES 2.0/3.0 loading
 ============================================
 
 Introduction
 ------------
 
-gl3w_ is the easiest way to get your hands on the functionality offered by the
-OpenGL 3/4 core profile specification.
+glesw_ is the easiest way to get your hands on the functionality offered by the
+OpenGL ES 2.0 and 3.0 specifications.
 
-Its main part is a simple gl3w_gen.py_ Python 2.6 script that downloads the
-Khronos_ supported gl3.h_ header and generates gl3w.h and gl3w.c from it. Those
-files can then be added and linked (statically or dynamically) into your
-project.
+It is a fork of gl3w with modifications specifically to work with EGL and OpenGL
+ES 2.0/3.0.
 
-Example
--------
-
-Here is a simple example of using gl3w_ with glut. Note that GL3/gl3w.h must be
-included before any other OpenGL related headers::
-
-    #include <stdio.h>
-    #include <GL3/gl3w.h>
-    #include <GL/glut.h>
-
-    // ...
-
-    int main(int argc, char **argv)
-    {
-            glutInit(&argc, argv);
-            glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
-            glutInitWindowSize(width, height);
-            glutCreateWindow("cookie");
-
-            glutReshapeFunc(reshape);
-            glutDisplayFunc(display);
-            glutKeyboardFunc(keyboard);
-            glutSpecialFunc(special);
-            glutMouseFunc(mouse);
-            glutMotionFunc(motion);
-
-            if (gl3wInit()) {
-                    fprintf(stderr, "failed to initialize OpenGL\n");
-                    return -1;
-            }
-            if (!gl3wIsSupported(3, 2)) {
-                    fprintf(stderr, "OpenGL 3.2 not supported\n");
-                    return -1;
-            }
-            printf("OpenGL %s, GLSL %s\n", glGetString(GL_VERSION),
-                   glGetString(GL_SHADING_LANGUAGE_VERSION));
-
-            // ...
-
-            glutMainLoop();
-            return 0;
-    }
+There are two scripts, one for each version. The main part is a simple script
+gles2w_gen.py_ or gles3w_gen.py_ Python 2.6 script that downloads the Khronos_
+supported headers and generates gles2w.h/gles3w.h and gles2w.c/gles3w.c 
+respectively from them. Those files can then be added and linked (statically or
+dynamically) into your project.
 
 API Reference
 -------------
 
-The gl3w_ API consists of just three functions:
+The glesw_ API consists of just three functions:
 
-``int gl3wInit(void)``
+``int gleswInit(void)``
 
     Initializes the library. Should be called once after an OpenGL context has
-    been created. Returns ``0`` when gl3w_ was initialized successfully,
+    been created. Returns ``0`` when glesw_ was initialized successfully,
     ``-1`` if there was an error.
 
-``int gl3wIsSupported(int major, int minor)``
+``int gleswIsSupported(int major, int minor)``
 
-    Returns ``1`` when OpenGL core profile version *major.minor* is available,
+    Returns ``1`` when OpenGL version *major.minor* is available,
     and ``0`` otherwise.
 
-``void *gl3wGetProcAddress(const char *proc)``
+``void *gleswGetProcAddress(const char *proc)``
 
     Returns the address of an OpenGL extension function. Generally, you won't
-    need to use it since gl3w_ loads all the functions defined in the OpenGL
+    need to use it since glesw_ loads all the functions defined in the OpenGL
     core profile on initialization. It allows you to load OpenGL extensions
     outside of the core profile.
 
 License
 -------
 
-gl3w_ is in the public domain.
+glesw_ is in the public domain.
 
 Credits
 -------
@@ -104,6 +65,7 @@ Copyright
 
 OpenGL_ is a registered trademark of SGI_.
 
+.. _glesw: https://github.com/davidjrogers/glesw
 .. _gl3w: https://github.com/skaslev/gl3w
 .. _gl3w_gen.py: https://github.com/skaslev/gl3w/blob/master/gl3w_gen.py
 .. _gl3.h: http://www.opengl.org/registry/api/gl3.h
