@@ -4,4 +4,4 @@
 bin
 lib
 include
-src/gl3w.c
+src/gles*.c
