@@ -66,22 +66,24 @@ with open('include/GLES3/gl3ext.h', 'r') as f:
             funcs.setdefault('signatures',[]).append(m.group(3))
 
 # Remove duplicates
-result = {}
+sortedFunctions = {}
+temp = {}
 
 for idx,proc in enumerate(funcs['procs']):
-# for key,value in funcs.items():
-    if funcs['procs'][idx] not in result.values():
-        result[idx] = funcs['procs'][idx]
+    if funcs['procs'][idx] not in temp.values():
+        temp[idx] = funcs['procs'][idx]
+
+        sortedFunctions.setdefault('returns',[]).append(funcs['returns'][idx])
+        sortedFunctions.setdefault('procs',[]).append(funcs['procs'][idx])
+        sortedFunctions.setdefault('signatures',[]).append(funcs['signatures'][idx])
     else:
-        del funcs['returns'][idx]
-        del funcs['procs'][idx]
-        del funcs['signatures'][idx]
+        print 'Skipping duplicate ' + funcs['procs'][idx] + ' definition'
 
 def proc_t(idx,proc):
-    return { 'p': funcs['procs'][idx],
-             'p_r': 'typedef ' + funcs['returns'][idx] + ' (GL_APIENTRY* PFN' + funcs['procs'][idx].upper() + 'PROC) (' + funcs['signatures'][idx] + ');',
-             'p_s': 'glesw' + funcs['procs'][idx][2:],
-             'p_t': 'PFN' + funcs['procs'][idx].upper() + 'PROC' }
+    return { 'p': sortedFunctions['procs'][idx],
+             'p_r': 'typedef ' + sortedFunctions['returns'][idx] + ' (GL_APIENTRY* PFN' + sortedFunctions['procs'][idx].upper() + 'PROC) (' + sortedFunctions['signatures'][idx] + ');',
+             'p_s': 'glesw' + sortedFunctions['procs'][idx][2:],
+             'p_t': 'PFN' + sortedFunctions['procs'][idx].upper() + 'PROC' }
 
 # Generate gles3w.h
 print 'Generating gles3w.h in include/GLES3...'
@@ -95,8 +97,11 @@ with open('include/GLES3/gles3w.h', 'wb') as f:
 #   define __gl_es30ext_h_
 #else
 #   include <GLES3/gl3.h>
-#   include <GLES3/gl3ext.h>
 #endif
+
+#include <KHR/khrplatform.h>
+#include <GLES3/gl3platform.h>
+#include <GLES3/gl3ext.h>
 
 #ifndef __gl3_h_
 #define __gl3_h_
@@ -113,13 +118,13 @@ void *gleswGetProcAddress(const char *proc);
 
 /* OpenGL functions */
 ''')
-    for idx,proc in enumerate(funcs['procs']):
+    for idx,proc in enumerate(sortedFunctions['procs']):
         f.write('%(p_r)s\n' % proc_t(idx,proc))
     f.write('\n')
-    for idx,proc in enumerate(funcs['procs']):
+    for idx,proc in enumerate(sortedFunctions['procs']):
         f.write('extern %(p_t)s %(p_s)s;\n' % proc_t(idx,proc))
     f.write('\n')
-    for idx,proc in enumerate(funcs['procs']):
+    for idx,proc in enumerate(sortedFunctions['procs']):
         f.write('#define %(p)s		%(p_s)s\n' % proc_t(idx,proc))
     f.write(r'''
 #ifdef __cplusplus
@@ -161,17 +166,33 @@ static void *get_proc(const char *proc)
 	return res;
 }
 #elif defined(__APPLE__) || defined(__APPLE_CC__)
-#include <CoreFoundation/CoreFoundation.h>
+#import <CoreFoundation/CoreFoundation.h>
+#import <UIKit/UIDevice.h>
 
 CFBundleRef bundle;
 CFURLRef bundleURL;
 
 static void open_libgl(void)
 {
+    CFStringRef frameworkPath = CFSTR("/System/Library/Frameworks/OpenGLES.framework");
+    NSString *sysVersion = [UIDevice currentDevice].systemVersion;
+    BOOL isSimulator = ([[UIDevice currentDevice].model rangeOfString:@"Simulator"].location != NSNotFound);
+    if(isSimulator)
+    {
+        if([sysVersion isEqualToString:@"6.1"])
+            frameworkPath = CFSTR("/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator6.1.sdk/System/Library/Frameworks/OpenGLES.framework");
+        else if([sysVersion isEqualToString:@"6.0"])
+            frameworkPath = CFSTR("/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator6.0.sdk/System/Library/Frameworks/OpenGLES.framework");
+        else if([sysVersion isEqualToString:@"5.1"])
+            frameworkPath = CFSTR("/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator5.1.sdk/System/Library/Frameworks/OpenGLES.framework");
+        else if([sysVersion isEqualToString:@"5.0"])
+            frameworkPath = CFSTR("/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator5.0.sdk/System/Library/Frameworks/OpenGLES.framework");
+    }
+
 	bundleURL = CFURLCreateWithFileSystemPath(kCFAllocatorDefault,
-                                              CFSTR("/System/Library/Frameworks/OpenGLES.framework"),
+                                              frameworkPath,
                                               kCFURLPOSIXPathStyle, true);
-    
+
 	bundle = CFBundleCreate(kCFAllocatorDefault, bundleURL);
 	assert(bundle != NULL);
 }
@@ -258,12 +279,12 @@ void *gleswGetProcAddress(const char *proc)
 }
 
 ''')
-    for idx,proc in enumerate(funcs['procs']):
+    for idx,proc in enumerate(sortedFunctions['procs']):
         f.write('%(p_t)s %(p_s)s;\n' % proc_t(idx,proc))
     f.write(r'''
 static void load_procs(void)
 {
 ''')
-    for idx,proc in enumerate(funcs['procs']):
+    for idx,proc in enumerate(sortedFunctions['procs']):
         f.write('\t%(p_s)s = (%(p_t)s) get_proc("%(p)s");\n' % proc_t(idx,proc))
     f.write('}\n')
